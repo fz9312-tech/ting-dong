@@ -1,8 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 
-// ⬇️ 把你的 Gemini API Key 填在这里
-const API_KEY = "AQ.Ab8RN6IEXp0IydcszNnE65GB86lcgBPoO87nQGrEwPD66LkTGQ";
-
 const LAYERS = [
   { key: "heard",   icon: "👂", label: "听到了什么",    sub: "对方字面上说了什么？" },
   { key: "unsaid",  icon: "🌊", label: "没有说的是什么", sub: "哪些信息被省略、模糊或回避了？" },
@@ -48,20 +45,23 @@ const SYSTEM_PROMPT = `你是一位对话分析与沟通教练，帮助用户练
 - 只返回JSON，不加任何前缀或解释文字`;
 
 async function callAI(userMessage) {
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        contents: [{ role: "user", parts: [{ text: userMessage }] }],
-        generationConfig: { maxOutputTokens: 1200 },
-      }),
-    }
-  );
+  const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${import.meta.env.VITE_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "google/gemini-flash-1.5",
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        { role: "user", content: userMessage },
+      ],
+      max_tokens: 1200,
+    }),
+  });
   const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  const text = data.choices?.[0]?.message?.content || "";
   const start = text.indexOf("{");
   const end = text.lastIndexOf("}");
   if (start === -1 || end === -1) throw new Error("No JSON: " + text.slice(0, 120));
@@ -109,7 +109,7 @@ export default function App() {
       setPhase("practice");
     } catch (e) {
       setPhase("intro");
-      setError("加载失败，请检查 API Key 后重试。");
+      setError("加载失败，请重试。");
     }
   }
 
@@ -159,14 +159,12 @@ export default function App() {
       color: "#2a1f14", display: "flex", flexDirection: "column",
       alignItems: "center", padding: "20px 16px 60px",
     }}>
-      {/* Header */}
       <div style={{ textAlign: "center", marginBottom: "24px", marginTop: "8px" }}>
         <div style={{ fontSize: "28px", letterSpacing: "6px", fontWeight: "normal", color: "#3d2b1a" }}>听·懂</div>
         <div style={{ fontSize: "11px", color: "#9b7e65", letterSpacing: "3px", marginTop: "4px" }}>对话深度练习</div>
         {round > 1 && <div style={{ fontSize: "12px", color: "#b09070", marginTop: "5px" }}>第 {round} 轮</div>}
       </div>
 
-      {/* Progress dots */}
       {showProgress && (
         <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "22px" }}>
           {[
@@ -197,7 +195,6 @@ export default function App() {
 
       <div style={{ width: "100%", maxWidth: "540px" }}>
 
-        {/* ── INTRO ── */}
         {phase === "intro" && (
           <div style={{ animation: "fadeIn 0.5s ease" }}>
             <div style={{
@@ -230,7 +227,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ── LOADING ── */}
         {["loading", "submitting", "evaluating"].includes(phase) && (
           <div style={{ textAlign: "center", padding: "70px 0", color: "#9b7e65", fontSize: "14px", letterSpacing: "2px" }}>
             <div style={{ fontSize: "28px", marginBottom: "16px", animation: "pulse 1.5s infinite" }}>
@@ -240,7 +236,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ── PRACTICE ── */}
         {phase === "practice" && scenario && (
           <div style={{ animation: "fadeIn 0.4s ease" }}>
             <ScenarioBox scenario={scenario} />
@@ -290,7 +285,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ── FEEDBACK ── */}
         {phase === "feedback" && feedback && (
           <div style={{ animation: "fadeIn 0.5s ease" }}>
             <ScenarioBox scenario={scenario} compact />
@@ -321,7 +315,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ── RESPOND ── */}
         {phase === "respond" && scenario && (
           <div style={{ animation: "fadeIn 0.4s ease" }}>
             <ScenarioBox scenario={scenario} compact />
@@ -350,7 +343,6 @@ export default function App() {
           </div>
         )}
 
-        {/* ── RESPONSE EVAL ── */}
         {phase === "response_eval" && responseEval && (
           <div style={{ animation: "fadeIn 0.5s ease" }}>
             <ScenarioBox scenario={scenario} compact />
